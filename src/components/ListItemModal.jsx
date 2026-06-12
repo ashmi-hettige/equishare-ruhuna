@@ -13,6 +13,7 @@ const emptyForm = {
 
 export default function ListItemModal({ isOpen, onClose, onSubmit }) {
   const [form, setForm] = useState(emptyForm);
+  const [file, setFile] = useState(null); 
 
   if (!isOpen) return null;
 
@@ -26,8 +27,9 @@ export default function ListItemModal({ isOpen, onClose, onSubmit }) {
     onSubmit({
       ...form,
       price: Number(form.price),
-    });
+    }, file);
     setForm(emptyForm);
+    setFile(null); 
     onClose();
   };
 
@@ -41,7 +43,7 @@ export default function ListItemModal({ isOpen, onClose, onSubmit }) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900">List a new item</h2>
@@ -81,6 +83,17 @@ export default function ListItemModal({ isOpen, onClose, onSubmit }) {
               rows={3}
               placeholder="Condition, what's included, pickup location..."
               className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            />
+          </div>
+
+          {/* NEW: Image Upload Field */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">Item Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files[0])}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500"
             />
           </div>
 

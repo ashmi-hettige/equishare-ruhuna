@@ -2,110 +2,190 @@ import { useEffect, useMemo, useState } from "react";
 import Header from "./components/Header.jsx";
 import ItemCard from "./components/ItemCard";
 import ListItemModal from "./components/ListItemModal";
+import ItemDetailsModal from "./components/ItemDetailsModal"; 
+import AuthModal from "./components/AuthModal";
 import { supabase } from "./supabaseClient";
+
+// Custom Alert/Confirm Modal Component (To solve the "Code" title issue)
+function CustomDialog({ config, onClose }) {
+  if (!config.isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 className="text-lg font-bold text-slate-900 mb-2">{config.title}</h3>
+        <p className="text-sm text-slate-600 mb-6">{config.message}</p>
+        <div className="flex justify-end gap-3">
+          {config.isConfirm && (
+            <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+          )}
+          <button 
+            onClick={() => { config.onConfirm && config.onConfirm(); onClose(); }} 
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            {config.isConfirm ? "Yes, Delete" : "OK"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [items, setItems] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null); 
+  const [editItemData, setEditItemData] = useState(null);
+  
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
+  const [sortBy, setSortBy] = useState("newest"); // NEW: Sort State
+  const [isUploading, setIsUploading] = useState(false); 
+
+  const [user, setUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // NEW: Dialog State
+  const [dialogConfig, setDialogConfig] = useState({ isOpen: false, title: "", message: "", isConfirm: false, onConfirm: null });
+
+  const showDialog = (title, message, isConfirm = false, onConfirm = null) => {
+    setDialogConfig({ isOpen: true, title, message, isConfirm, onConfirm });
+  };
 
   useEffect(() => {
     fetchItems();
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    return () => subscription.unsubscribe();
   }, []);
 
- const fetchItems = async () => {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Error fetching items:", error);
-    } else {
+  const fetchItems = async () => {
+    const { data, error } = await supabase.from('items').select('*').order('created_at', { ascending: false });
+    if (!error) {
       const liveData = data.map(item => ({
         id: item.id,
+        user_id: item.user_id, 
         title: item.title,
         description: item.description,
         category: item.category,
         price: parseInt(item.price) || 0,
         contact: {
-          name: item.uploaded_by || "Ruhuna Student", 
+          name: item.uploaded_by || "Ruhuna Student",
           phone: item.contact_info,
-          email: "",
         },
         image: item.image_url || "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400",
+        images: item.images || [], 
       }));
       setItems(liveData);
     }
   };
 
-  const categories = useMemo(
-    () => ["All", "Electronics", "Photography", "Lab Equipment", "Sports", "Books", "Other"],
-    []
-  );
+  const categories = useMemo(() => ["All", "Electronics", "Photography", "Lab Equipment", "Sports", "Books", "Other"], []);
 
-  const filteredItems = items.filter((item) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.description.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = filterCategory === "All" || item.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // NEW: Dynamic Active Users Calculation (Counts unique user_ids who have uploaded items)
+  const activeCommunityCount = useMemo(() => new Set(items.map(i => i.user_id).filter(Boolean)).size, [items]);
 
-const handleNewListing = async (form, file) => {
-    let imageUrl = null;
+  // Handle Search, Filter, AND Sorting
+  const filteredItems = items
+    .filter((item) => {
+      const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase()) || item.description.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = filterCategory === "All" || item.category === filterCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === "price-asc") return a.price - b.price;
+      if (sortBy === "price-desc") return b.price - a.price;
+      if (sortBy === "name-asc") return a.title.localeCompare(b.title);
+      return 0; // Default is newest, which is already handled by the fetch order
+    });
 
-    if (file) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+  const handleSaveListing = async (form, newFiles, existingImages, editId = null) => {
+    if (!user) return showDialog("Authentication Required", "You must be logged in to list an item.");
 
-      const { error: uploadError } = await supabase.storage
-        .from('item-images')
-        .upload(filePath, file);
+    setIsUploading(true);
+    let uploadedUrls = [];
 
-      if (uploadError) {
-        console.error("Error uploading image:", uploadError);
-        alert("Failed to upload image.");
-        return;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('item-images')
-        .getPublicUrl(filePath);
-      
-      imageUrl = publicUrl;
+    // 1. Upload new files if any
+    if (newFiles && newFiles.length > 0) {
+      const uploadPromises = newFiles.map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const { error } = await supabase.storage.from('item-images').upload(fileName, file);
+        if (!error) return supabase.storage.from('item-images').getPublicUrl(fileName).data.publicUrl;
+        return null;
+      });
+      const results = await Promise.all(uploadPromises);
+      uploadedUrls = results.filter(url => url !== null);
     }
 
-    const { error } = await supabase
-      .from('items')
-      .insert([
-        {
-          title: form.title,
-          description: form.description,
-          category: form.category,
-          price: form.price.toString(),
-          contact_info: form.contactPhone,
-          is_available: true,
-          image_url: imageUrl, 
-          uploaded_by: form.contactName 
-        }
-      ]);
+    // Combine newly uploaded images with the remaining existing images
+    const finalImagesArray = [...existingImages, ...uploadedUrls];
 
-    if (error) {
-      alert("Error saving to database! Check console.");
-      console.error(error);
+    const payload = {
+      user_id: user.id,
+      title: form.title,
+      description: form.description,
+      category: form.category,
+      price: form.price.toString(),
+      contact_info: form.contactPhone,
+      is_available: true,
+      image_url: finalImagesArray[0] || null, 
+      images: finalImagesArray,               
+      uploaded_by: form.contactName
+    };
+
+    let responseError;
+    if (editId) {
+      const { error } = await supabase.from('items').update(payload).eq('id', editId);
+      responseError = error;
     } else {
+      const { error } = await supabase.from('items').insert([payload]);
+      responseError = error;
+    }
+
+    setIsUploading(false);
+    if (responseError) {
+      showDialog("Database Error", "Error saving to database! Check console.");
+    } else {
+      setSelectedItem(null); // Close details if open
       fetchItems(); 
     }
   };
 
-  return (
-    <div className="min-h-screen">
-      <Header onListItem={() => setIsModalOpen(true)} />
+  const handleDelete = (itemId) => {
+    showDialog("Delete Item", "Are you sure you want to permanently delete this listing?", true, async () => {
+      const { error } = await supabase.from('items').delete().eq('id', itemId);
+      if (error) showDialog("Error", "Error deleting item.");
+      else {
+        setSelectedItem(null); 
+        fetchItems(); 
+      }
+    });
+  };
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <CustomDialog config={dialogConfig} onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })} />
+
+      <Header 
+        user={user} 
+        onLoginClick={() => setIsAuthOpen(true)} 
+        onLogoutClick={handleLogout}
+        onListItem={() => {
+          if (user) {
+            setEditItemData(null); // Ensure it's a new form
+            setIsModalOpen(true);
+          } else {
+            setIsAuthOpen(true);
+          }
+        }} 
+      />
+
+      <main className="flex-grow mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section className="mb-8 overflow-hidden rounded-3xl bg-linear-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -114,11 +194,12 @@ const handleNewListing = async (form, file) => {
                 Find calculators, cameras, lab gear, and more from students at Ruhuna — no shop needed.
               </p>
             </div>
+            
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
               {[
                 { label: "Live Listings", value: items.length },
                 { label: "Categories", value: categories.length - 1 },
-                { label: "Community", value: "Active" },
+                { label: "Active Members", value: activeCommunityCount }, // Dynamic count
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl bg-white/15 px-3 py-3 text-center backdrop-blur sm:px-4">
                   <p className="text-xl font-bold sm:text-2xl">{stat.value}</p>
@@ -129,15 +210,35 @@ const handleNewListing = async (form, file) => {
           </div>
         </section>
 
+        {isUploading && (
+          <div className="mb-4 rounded-xl bg-amber-100 p-4 text-center text-amber-800 font-medium">
+            ⏳ Uploading to the cloud... please wait!
+          </div>
+        )}
+
         <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative max-w-md flex-1">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tools, books, cameras..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-            />
+          <div className="flex flex-1 gap-2">
+            <div className="relative flex-1 max-w-sm">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tools..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-emerald-500"
+              />
+            </div>
+            
+            {/* NEW: Sort Dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-emerald-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="name-asc">Name: A to Z</option>
+            </select>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -160,22 +261,55 @@ const handleNewListing = async (form, file) => {
         {filteredItems.length > 0 ? (
           <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard 
+                key={item.id} 
+                item={item} 
+                onClick={() => setSelectedItem(item)} 
+                currentUser={user}
+                onRequireAuth={() => setIsAuthOpen(true)}
+              />
             ))}
           </section>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
             <p className="text-lg font-medium text-slate-600">No items found</p>
-            <p className="mt-1 text-sm text-slate-400">Be the first to list an item on campus!</p>
           </div>
         )}
       </main>
 
-      <footer className="mt-16 border-t border-slate-200 bg-white py-6 text-center text-sm text-slate-500">
-        EquiShare Ruhuna · Built for the university competition · {new Date().getFullYear()}
+      {/* FOOTER */}
+      <footer className="border-t border-slate-200 bg-slate-50 py-6 text-center mt-auto">
+        <p className="text-sm text-slate-500">
+          © 2026 EquiShare Ruhuna, Inc. · Built for the university competition.
+        </p>
       </footer>
 
-      <ListItemModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleNewListing} />
+      <ListItemModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onSubmit={handleSaveListing} 
+        user={user}
+        editItem={editItemData}
+        onShowAlert={showDialog}
+      />
+      
+      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+
+      <ItemDetailsModal 
+        item={selectedItem} 
+        currentUser={user} 
+        onClose={() => setSelectedItem(null)} 
+        onDelete={handleDelete}
+        onEdit={(item) => {
+          setSelectedItem(null); 
+          setEditItemData(item); // Load item into the editor
+          setIsModalOpen(true);  // Open the list modal
+        }}
+        onRequireAuth={() => {
+          setSelectedItem(null); 
+          setIsAuthOpen(true);   
+        }}
+      />
     </div>
   );
 }

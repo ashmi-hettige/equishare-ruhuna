@@ -7,11 +7,24 @@ const categoryColors = {
   Other: "bg-slate-100 text-slate-700",
 };
 
-export default function ItemCard({ item }) {
+export default function ItemCard({ item, onClick, currentUser, onRequireAuth }) {
   const badgeClass = categoryColors[item.category] || categoryColors.Other;
 
+  // This function intercepts the click on the contact buttons
+  const handleContactClick = (e) => {
+    e.stopPropagation(); // Prevents the details modal from opening
+    
+    if (!currentUser) {
+      e.preventDefault(); // Stops the call/WhatsApp link from executing
+      onRequireAuth();    // Opens the login modal instead
+    }
+  };
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60">
+    <article 
+      onClick={onClick} 
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60"
+    >
       <div className="relative h-44 overflow-hidden bg-slate-100">
         <img
           src={item.image}
@@ -36,17 +49,20 @@ export default function ItemCard({ item }) {
           </div>
         </div>
 
+        {/* Contact buttons are always visible, but protected by handleContactClick */}
         <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           <a
             href={`tel:${item.contact.phone}`}
+            onClick={handleContactClick}
             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
           >
             📞 Call
           </a>
           <a
             href={`https://wa.me/94${item.contact.phone.replace(/^0/, "")}`}
-            target="_blank"
+            target={currentUser ? "_blank" : undefined}
             rel="noreferrer"
+            onClick={handleContactClick}
             className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
           >
             WhatsApp
@@ -54,7 +70,7 @@ export default function ItemCard({ item }) {
         </div>
 
         <p className="mt-3 text-center text-xs text-slate-400">
-          Listed by {item.contact.name}
+          Uploaded by {item.contact.name}
         </p>
       </div>
     </article>

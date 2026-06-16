@@ -82,10 +82,10 @@ export default function ItemDetailsModal({ item, currentUser, onClose, onDelete,
           {isOwner && (
             <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
               <button onClick={() => onEdit(item)} className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
-                ✏️ Update
+                Edit
               </button>
               <button onClick={() => onDelete(item.id)} className="flex-1 rounded-xl bg-red-50 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100">
-                🗑️ Delete
+                Delete
               </button>
             </div>
           )}

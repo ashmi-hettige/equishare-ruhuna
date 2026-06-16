@@ -4,6 +4,7 @@ import ItemCard from "./components/ItemCard";
 import ListItemModal from "./components/ListItemModal";
 import ItemDetailsModal from "./components/ItemDetailsModal"; 
 import AuthModal from "./components/AuthModal";
+import ProfileModal from "./components/ProfileModal"; // NEW IMPORT
 import { supabase } from "./supabaseClient";
 
 // Custom Alert/Confirm Modal Component (To solve the "Code" title issue)
@@ -23,7 +24,7 @@ function CustomDialog({ config, onClose }) {
             onClick={() => { config.onConfirm && config.onConfirm(); onClose(); }} 
             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
-            {config.isConfirm ? "Yes, Delete" : "OK"}
+            {config.isConfirm ? "Yes" : "OK"}
           </button>
         </div>
       </div>
@@ -44,6 +45,8 @@ export default function App() {
 
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false); // NEW STATE
+  const [totalUsers, setTotalUsers] = useState(0); // NEW STATE
 
   // NEW: Dialog State
   const [dialogConfig, setDialogConfig] = useState({ isOpen: false, title: "", message: "", isConfirm: false, onConfirm: null });
@@ -54,8 +57,13 @@ export default function App() {
 
   useEffect(() => {
     fetchItems();
+    fetchTotalUsers(); // Fetch global users
+
     supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchTotalUsers(); // Refresh count on login/signup
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -80,10 +88,13 @@ export default function App() {
     }
   };
 
-  const categories = useMemo(() => ["All", "Electronics", "Photography", "Lab Equipment", "Sports", "Books", "Other"], []);
+  // Fetch Global User Count from our new Profiles table
+  const fetchTotalUsers = async () => {
+    const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    if (!error) setTotalUsers(count || 0);
+  };
 
-  // NEW: Dynamic Active Users Calculation (Counts unique user_ids who have uploaded items)
-  const activeCommunityCount = useMemo(() => new Set(items.map(i => i.user_id).filter(Boolean)).size, [items]);
+  const categories = useMemo(() => ["All", "Electronics", "Photography", "Lab Equipment", "Sports", "Books", "Other"], []);
 
   // Handle Search, Filter, AND Sorting
   const filteredItems = items
@@ -175,6 +186,7 @@ export default function App() {
         user={user} 
         onLoginClick={() => setIsAuthOpen(true)} 
         onLogoutClick={handleLogout}
+        onProfileClick={() => setIsProfileOpen(true)} // Open profile modal
         onListItem={() => {
           if (user) {
             setEditItemData(null); // Ensure it's a new form
@@ -186,12 +198,15 @@ export default function App() {
       />
 
       <main className="flex-grow mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="mb-8 overflow-hidden rounded-3xl bg-linear-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white  sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <section className="mb-6 overflow-hidden rounded-3xl bg-linear-to-br from-emerald-600 via-teal-600 to-cyan-700 p-5 text-white sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-2xl font-bold sm:text-3xl">Borrow smarter. Share on campus.</h2>
-              <p className="mt-2 max-w-xl text-sm text-emerald-50 sm:text-base">
-                Find calculators, cameras, lab gear, and more from students at Ruhuna — no shop needed.
+              <p className="mt-3 max-w-2xl text-sm text-emerald-50 sm:text-base">
+                Find calculators, cameras, lab gear, and more from students at E-fac Ruhuna 
+              </p>
+              <p className="mt-0 max-w-2xl text-sm text-emerald-50 sm:text-base">
+                No shop needed.
               </p>
             </div>
             
@@ -199,11 +214,11 @@ export default function App() {
               {[
                 { label: "Live Listings", value: items.length },
                 { label: "Categories", value: categories.length - 1 },
-                { label: "Active Members", value: activeCommunityCount }, // Dynamic count
+                { label: "Active Members", value: totalUsers }, // Dynamic global count
               ].map((stat) => (
-                <div key={stat.label} className="rounded-2xl bg-white/15 px-3 py-3 text-center backdrop-blur sm:px-4">
+                <div key={stat.label} className="rounded-2xl bg-white/15 px-4 py-4 text-center backdrop-blur sm:px-4">
                   <p className="text-xl font-bold sm:text-2xl">{stat.value}</p>
-                  <p className="text-xs text-emerald-100">{stat.label}</p>
+                  <p className="text-sm text-emerald-100">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -211,7 +226,7 @@ export default function App() {
         </section>
 
         {isUploading && (
-          <div className="mb-4 rounded-xl bg-amber-100 p-4 text-center text-amber-800 font-medium">
+          <div className="mb-4 rounded-xl bg-green-100 p-3 text-center text-green-800 font-medium">
             ⏳ Uploading to the cloud... please wait!
           </div>
         )}
@@ -219,12 +234,11 @@ export default function App() {
         <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 gap-2">
             <div className="relative flex-1 max-w-sm">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tools..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-emerald-500"
+                placeholder="Search EquiShare"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-4 pr-4 text-sm shadow-sm outline-none transition focus:border-emerald-500"
               />
             </div>
             
@@ -232,7 +246,7 @@ export default function App() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-emerald-500"
+              className="rounded-xl border border-slate-200 bg-white  text-slate-600 px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-emerald-500"
             >
               <option value="newest">Newest First</option>
               <option value="price-asc">Price: Low to High</option>
@@ -248,7 +262,7 @@ export default function App() {
                 onClick={() => setFilterCategory(cat)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   filterCategory === cat
-                    ? "bg-emerald-600 text-white shadow-md"
+                    ? "bg-emerald-600 text-white"
                     : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
                 }`}
               >
@@ -280,7 +294,7 @@ export default function App() {
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50 py-6 text-center mt-auto">
         <p className="text-sm text-slate-500">
-          © 2026 EquiShare Ruhuna, Inc. · Built for the university competition.
+          © 2026, EquiShare Ruhuna, Inc. 
         </p>
       </footer>
 
@@ -293,7 +307,20 @@ export default function App() {
         onShowAlert={showDialog}
       />
       
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal 
+        isOpen={isAuthOpen} 
+        onClose={() => setIsAuthOpen(false)} 
+        onShowAlert={showDialog} 
+      />
+
+      {/* NEW: Profile Edit Modal */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        onShowAlert={showDialog}
+        onProfileUpdated={(updatedUser) => setUser(updatedUser)}
+      />
 
       <ItemDetailsModal 
         item={selectedItem} 

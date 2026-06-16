@@ -70,7 +70,7 @@ export default function ItemCard({ item, onClick, currentUser, onRequireAuth }) 
         </div>
 
         <p className="mt-3 text-center text-xs text-slate-400">
-          Uploaded by {item.contact.name}
+          Listed by {item.contact.name}
         </p>
       </div>
     </article>

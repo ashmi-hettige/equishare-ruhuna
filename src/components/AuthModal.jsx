@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function AuthModal({ isOpen, onClose }) {
-  const [email, setEmail] = useState("");
+export default function AuthModal({ isOpen, onClose, onShowAlert }) {
+  // We changed 'email' to 'username' since we handle the domain automatically
+  const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
@@ -13,7 +14,7 @@ export default function AuthModal({ isOpen, onClose }) {
   // Reset form and default to Login every time the modal opens
   useEffect(() => {
     if (isOpen) {
-      setEmail("");
+      setUsername("");
       setPassword("");
       setConfirmPassword("");
       setName("");
@@ -28,41 +29,41 @@ export default function AuthModal({ isOpen, onClose }) {
     e.preventDefault();
     setLoading(true);
 
+    // Combine the typed username with the strict university domain
+    const finalEmail = `${username.toLowerCase()}@engug.ruh.ac.lk`;
+
     if (isSignUp) {
-      if (!email.toLowerCase().includes("ruh.ac.lk")) {
-        alert("Invalid Email: Please use a valid Ruhuna University email (e.g., you@student.ruh.ac.lk)");
-        setLoading(false);
-        return;
-      }
       if (password !== confirmPassword) {
-        alert("Password Mismatch: Your passwords do not match.");
+        onShowAlert("Password Mismatch", "Your passwords do not match. Please try again.");
         setLoading(false);
         return;
       }
       if (phone.length !== 10 || isNaN(phone)) {
-        alert("Invalid Phone Number: Please enter a valid 10-digit contact number.");
+        onShowAlert("Invalid Phone", "Please enter a valid 10-digit contact number.");
         setLoading(false);
         return;
       }
 
       // Save additional metadata (name, phone) during signup
       const { error } = await supabase.auth.signUp({ 
-        email, 
+        email: finalEmail, 
         password,
-        options: {
-          data: { full_name: name, phone_number: phone }
-        }
+        options: { data: { full_name: name, phone_number: phone } }
       });
       
-      if (error) alert(`Sign Up Failed: ${error.message}`);
-      else {
-         alert("Success: Welcome to EquiShare Ruhuna! You are now logged in.");
-         onClose();
+      if (error) {
+        onShowAlert("Sign Up Failed", error.message);
+      } else {
+        onShowAlert("Success", "Welcome to EquiShare Ruhuna! You are now logged in.");
+        onClose();
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(`Login Failed: ${error.message}`);
-      else onClose();
+      const { error } = await supabase.auth.signInWithPassword({ email: finalEmail, password });
+      if (error) {
+        onShowAlert("Login Failed", "Invalid credentials. Please try again.");
+      } else {
+        onClose();
+      }
     }
     setLoading(false);
   };
@@ -73,7 +74,7 @@ export default function AuthModal({ isOpen, onClose }) {
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         
         {/* EquiShare Logo */}
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-600 text-xl font-bold text-white shadow-lg shadow-emerald-500/25">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-600 text-5xl font-bold text-white shadow-emerald-500/25">
           E
         </div>
 
@@ -94,7 +95,7 @@ export default function AuthModal({ isOpen, onClose }) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  placeholder="e.g. Ashmi Hettige"
+                  placeholder="Ashmi Hettige"
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500"
                 />
               </div>
@@ -115,15 +116,23 @@ export default function AuthModal({ isOpen, onClose }) {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">University Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@student.ruh.ac.lk"
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500"
-            />
+            {/* NEW: Input Group with locked domain suffix */}
+            <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 transition focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10">
+              <input 
+                type="text" 
+                value={username} 
+                // This clever onChange removes spaces and anything pasted after an '@' symbol
+                onChange={(e) => setUsername(e.target.value.split('@')[0].replace(/\s+/g, ''))} 
+                required 
+                placeholder="e.g. nethmi" 
+                className="w-full px-4 py-2.5 text-sm outline-none" 
+              />
+              <div className="bg-slate-50 border-l border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-500 pointer-events-none whitespace-nowrap">
+                @engug.ruh.ac.lk
+              </div>
+            </div>
           </div>
+          
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
             <input

@@ -4,10 +4,9 @@ import ItemCard from "./components/ItemCard";
 import ListItemModal from "./components/ListItemModal";
 import ItemDetailsModal from "./components/ItemDetailsModal"; 
 import AuthModal from "./components/AuthModal";
-import ProfileModal from "./components/ProfileModal"; // NEW IMPORT
+import ProfileModal from "./components/ProfileModal"; 
 import { supabase } from "./supabaseClient";
 
-// Custom Alert/Confirm Modal Component (To solve the "Code" title issue)
 function CustomDialog({ config, onClose }) {
   if (!config.isOpen) return null;
   return (
@@ -40,15 +39,14 @@ export default function App() {
   
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("newest"); // NEW: Sort State
+  const [sortBy, setSortBy] = useState("newest"); 
   const [isUploading, setIsUploading] = useState(false); 
 
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false); // NEW STATE
-  const [totalUsers, setTotalUsers] = useState(0); // NEW STATE
+  const [isProfileOpen, setIsProfileOpen] = useState(false); 
+  const [totalUsers, setTotalUsers] = useState(0); 
 
-  // NEW: Dialog State
   const [dialogConfig, setDialogConfig] = useState({ isOpen: false, title: "", message: "", isConfirm: false, onConfirm: null });
 
   const showDialog = (title, message, isConfirm = false, onConfirm = null) => {
@@ -57,12 +55,12 @@ export default function App() {
 
   useEffect(() => {
     fetchItems();
-    fetchTotalUsers(); // Fetch global users
+    fetchTotalUsers(); 
 
     supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchTotalUsers(); // Refresh count on login/signup
+      if (session?.user) fetchTotalUsers();
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -88,7 +86,6 @@ export default function App() {
     }
   };
 
-  // Fetch Global User Count from our new Profiles table
   const fetchTotalUsers = async () => {
     const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
     if (!error) setTotalUsers(count || 0);
@@ -96,7 +93,6 @@ export default function App() {
 
   const categories = useMemo(() => ["All", "Electronics", "Photography", "Lab Equipment", "Sports", "Books", "Other"], []);
 
-  // Handle Search, Filter, AND Sorting
   const filteredItems = items
     .filter((item) => {
       const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase()) || item.description.toLowerCase().includes(search.toLowerCase());
@@ -107,7 +103,7 @@ export default function App() {
       if (sortBy === "price-asc") return a.price - b.price;
       if (sortBy === "price-desc") return b.price - a.price;
       if (sortBy === "name-asc") return a.title.localeCompare(b.title);
-      return 0; // Default is newest, which is already handled by the fetch order
+      return 0; 
     });
 
   const handleSaveListing = async (form, newFiles, existingImages, editId = null) => {
@@ -116,7 +112,6 @@ export default function App() {
     setIsUploading(true);
     let uploadedUrls = [];
 
-    // 1. Upload new files if any
     if (newFiles && newFiles.length > 0) {
       const uploadPromises = newFiles.map(async (file) => {
         const fileExt = file.name.split('.').pop();
@@ -129,7 +124,6 @@ export default function App() {
       uploadedUrls = results.filter(url => url !== null);
     }
 
-    // Combine newly uploaded images with the remaining existing images
     const finalImagesArray = [...existingImages, ...uploadedUrls];
 
     const payload = {
@@ -158,7 +152,7 @@ export default function App() {
     if (responseError) {
       showDialog("Database Error", "Error saving to database! Check console.");
     } else {
-      setSelectedItem(null); // Close details if open
+      setSelectedItem(null); 
       fetchItems(); 
     }
   };
@@ -186,10 +180,10 @@ export default function App() {
         user={user} 
         onLoginClick={() => setIsAuthOpen(true)} 
         onLogoutClick={handleLogout}
-        onProfileClick={() => setIsProfileOpen(true)} // Open profile modal
+        onProfileClick={() => setIsProfileOpen(true)} 
         onListItem={() => {
           if (user) {
-            setEditItemData(null); // Ensure it's a new form
+            setEditItemData(null); 
             setIsModalOpen(true);
           } else {
             setIsAuthOpen(true);
@@ -214,7 +208,7 @@ export default function App() {
               {[
                 { label: "Live Listings", value: items.length },
                 { label: "Categories", value: categories.length - 1 },
-                { label: "Active Members", value: totalUsers }, // Dynamic global count
+                { label: "Active Members", value: totalUsers }, 
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl bg-white/15 px-4 py-4 text-center backdrop-blur sm:px-4">
                   <p className="text-xl font-bold sm:text-2xl">{stat.value}</p>
@@ -329,8 +323,8 @@ export default function App() {
         onDelete={handleDelete}
         onEdit={(item) => {
           setSelectedItem(null); 
-          setEditItemData(item); // Load item into the editor
-          setIsModalOpen(true);  // Open the list modal
+          setEditItemData(item); 
+          setIsModalOpen(true);  
         }}
         onRequireAuth={() => {
           setSelectedItem(null); 

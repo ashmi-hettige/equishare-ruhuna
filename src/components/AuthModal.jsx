@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
 export default function AuthModal({ isOpen, onClose, onShowAlert }) {
-  // We changed 'email' to 'username' since we handle the domain automatically
   const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -11,7 +10,6 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Reset form and default to Login every time the modal opens
   useEffect(() => {
     if (isOpen) {
       setUsername("");
@@ -44,7 +42,6 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
         return;
       }
 
-      // Save additional metadata (name, phone) during signup
       const { error } = await supabase.auth.signUp({ 
         email: finalEmail, 
         password,
@@ -121,10 +118,9 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
               <input 
                 type="text" 
                 value={username} 
-                // This clever onChange removes spaces and anything pasted after an '@' symbol
                 onChange={(e) => setUsername(e.target.value.split('@')[0].replace(/\s+/g, ''))} 
                 required 
-                placeholder="e.g. nethmi" 
+                placeholder="eg255648" 
                 className="w-full px-4 py-2.5 text-sm outline-none" 
               />
               <div className="bg-slate-50 border-l border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-500 pointer-events-none whitespace-nowrap">

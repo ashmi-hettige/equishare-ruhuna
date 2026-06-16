@@ -12,14 +12,13 @@ const categoryColors = {
 export default function ItemDetailsModal({ item, currentUser, onClose, onDelete, onEdit, onRequireAuth }) {
   const [mainImage, setMainImage] = useState(null);
   
-  // NEW: State to control the full-screen image view
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (item) {
       const allImages = item.images && item.images.length > 0 ? item.images : [item.image];
       setMainImage(allImages[0]);
-      setIsFullscreen(false); // Reset fullscreen if they open a new item
+      setIsFullscreen(false); 
     }
   }, [item]);
 

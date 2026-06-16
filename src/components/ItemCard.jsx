@@ -10,13 +10,12 @@ const categoryColors = {
 export default function ItemCard({ item, onClick, currentUser, onRequireAuth }) {
   const badgeClass = categoryColors[item.category] || categoryColors.Other;
 
-  // This function intercepts the click on the contact buttons
   const handleContactClick = (e) => {
-    e.stopPropagation(); // Prevents the details modal from opening
+    e.stopPropagation(); 
     
     if (!currentUser) {
-      e.preventDefault(); // Stops the call/WhatsApp link from executing
-      onRequireAuth();    // Opens the login modal instead
+      e.preventDefault(); 
+      onRequireAuth();    
     }
   };
 

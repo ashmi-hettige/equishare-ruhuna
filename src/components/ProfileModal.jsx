@@ -5,20 +5,17 @@ export default function ProfileModal({ isOpen, onClose, user, onShowAlert, onPro
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   
-  // NEW: Password change states
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
 
-  // Auto-fill existing user details when the modal opens
   useEffect(() => {
     if (isOpen && user) {
       const meta = user.user_metadata || {};
       setName(meta.full_name || "");
       setPhone(meta.phone_number || "");
       
-      // Always reset the password fields to blank when opening
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -30,14 +27,12 @@ export default function ProfileModal({ isOpen, onClose, user, onShowAlert, onPro
     e.preventDefault();
     setLoading(true);
 
-    // Validate phone
     if (phone.length !== 10 || isNaN(phone)) {
       onShowAlert("Invalid Phone Number", "Please enter a valid 10-digit contact number.");
       setLoading(false);
       return;
     }
 
-    // Validate new passwords if the user typed something into them
     if (newPassword || confirmPassword) {
       if (newPassword !== confirmPassword) {
         onShowAlert("Password Mismatch", "Your new passwords do not match. Please try again.");
@@ -51,12 +46,10 @@ export default function ProfileModal({ isOpen, onClose, user, onShowAlert, onPro
       }
     }
 
-    // Prepare the update package for Supabase
     const updatePayload = {
       data: { full_name: name, phone_number: phone }
     };
 
-    // Only tell Supabase to update the password if they actually typed a new one
     if (newPassword) {
       updatePayload.password = newPassword;
     }

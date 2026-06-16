@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { categories } from "../data/mockItems";
+
+const categories = [
+  "Electronics", 
+  "Photography", 
+  "Lab Equipment", 
+  "Sports", 
+  "Books", 
+  "Other"
+];
 
 export default function ListItemModal({ isOpen, onClose, onSubmit, user, editItem, onShowAlert }) {
   const fileInputRef = useRef(null);
@@ -11,7 +19,6 @@ export default function ListItemModal({ isOpen, onClose, onSubmit, user, editIte
   const [existingImages, setExistingImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
 
-  // Auto-fill user data or Edit mode data when the modal opens
   useEffect(() => {
     if (isOpen) {
       if (editItem) {
@@ -62,7 +69,6 @@ export default function ListItemModal({ isOpen, onClose, onSubmit, user, editIte
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validations
     if (form.contactPhone.length !== 10 || isNaN(form.contactPhone)) {
       onShowAlert("Invalid Contact", "Please enter a valid 10-digit contact number.");
       return;

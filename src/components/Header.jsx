@@ -18,7 +18,6 @@ export default function Header({ user, onLoginClick, onLogoutClick, onListItem, 
         <div className="flex items-center gap-3 sm:gap-6">
           {user ? (
             <>
-              {/* UPDATED: Clickable email button */}
               <button 
                 onClick={onProfileClick} 
                 className="hidden text-sm font-medium text-emerald-700 underline-offset-4 hover:underline md:block"

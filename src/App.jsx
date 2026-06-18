@@ -236,7 +236,6 @@ export default function App() {
               />
             </div>
             
-            {/* NEW: Sort Dropdown */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -285,7 +284,6 @@ export default function App() {
         )}
       </main>
 
-      {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-slate-50 py-6 text-center mt-auto">
         <p className="text-sm text-slate-500">
           © 2026, EquiShare Ruhuna, Inc. 
@@ -307,7 +305,6 @@ export default function App() {
         onShowAlert={showDialog} 
       />
 
-      {/* NEW: Profile Edit Modal */}
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}

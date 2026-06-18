@@ -110,7 +110,6 @@ export default function ListItemModal({ isOpen, onClose, onSubmit, user, editIte
             <textarea name="description" value={form.description} onChange={handleChange} required rows={3} placeholder="Condition, what's included, pickup location..." className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" />
           </div>
 
-          {/* NEW: Custom Attach Image Field */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Item Images</label>
             <div className="flex flex-col gap-3">
@@ -123,7 +122,6 @@ export default function ListItemModal({ isOpen, onClose, onSubmit, user, editIte
               </button>
               <input type="file" accept="image/*" multiple hidden ref={fileInputRef} onChange={handleFileSelect} />
               
-              {/* Image Previews */}
               {(existingImages.length > 0 || newFiles.length > 0) && (
                 <div className="flex gap-2 overflow-x-auto py-2">
                   {existingImages.map((imgUrl, idx) => (

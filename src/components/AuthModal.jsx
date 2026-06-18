@@ -27,7 +27,6 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
     e.preventDefault();
     setLoading(true);
 
-    // Combine the typed username with the strict university domain
     const finalEmail = `${username.toLowerCase()}@engug.ruh.ac.lk`;
 
     if (isSignUp) {
@@ -70,7 +69,6 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         
-        {/* EquiShare Logo */}
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-600 text-5xl font-bold text-white shadow-emerald-500/25">
           E
         </div>
@@ -113,7 +111,6 @@ export default function AuthModal({ isOpen, onClose, onShowAlert }) {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">University Email</label>
-            {/* NEW: Input Group with locked domain suffix */}
             <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 transition focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10">
               <input 
                 type="text" 

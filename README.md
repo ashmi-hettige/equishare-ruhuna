@@ -30,6 +30,7 @@ graph TD
     C -->|Session Token| A
     D -->|Real-time JSON Data| A
     E -->|Public Image URLs| A
+```
 
 ## Key Features
 * 🔒 **Exclusive Campus Access:** Only verified @engug.ruh.ac.lk emails can register.

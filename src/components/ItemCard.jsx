@@ -48,7 +48,6 @@ export default function ItemCard({ item, onClick, currentUser, onRequireAuth }) 
           </div>
         </div>
 
-        {/* Contact buttons are always visible, but protected by handleContactClick */}
         <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           <a
             href={`tel:${item.contact.phone}`}

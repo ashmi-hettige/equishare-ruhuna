@@ -37,7 +37,6 @@ export default function ItemDetailsModal({ item, currentUser, onClose, onDelete,
 
   return (
     <>
-      {/* NEW: Fullscreen Image Lightbox */}
       {isFullscreen && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 cursor-zoom-out backdrop-blur-sm"
@@ -52,16 +51,13 @@ export default function ItemDetailsModal({ item, currentUser, onClose, onDelete,
         </div>
       )}
 
-      {/* Main Item Details Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
         
         <div className="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
           
-          {/* Left Side: Image Gallery */}
           <div className="md:w-1/2 bg-slate-100 p-4 flex flex-col gap-4 overflow-y-auto">
             
-            {/* UPDATED: Clickable Main Image with Hover Hint */}
             <div 
               className="relative group cursor-zoom-in" 
               onClick={() => setIsFullscreen(true)}
@@ -94,7 +90,6 @@ export default function ItemDetailsModal({ item, currentUser, onClose, onDelete,
             )}
           </div>
 
-          {/* Right Side: Details */}
           <div className="md:w-1/2 p-6 md:p-8 overflow-y-auto flex flex-col">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -125,7 +120,7 @@ export default function ItemDetailsModal({ item, currentUser, onClose, onDelete,
               </div>
             </div>
 
-            {/* Owner Controls: Update and Delete */}
+            {/* Owner Controls */}
             {isOwner && (
               <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
                 <button onClick={() => onEdit(item)} className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
